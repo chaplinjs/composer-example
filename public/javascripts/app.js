@@ -80,11 +80,13 @@
 })();
 
 window.require.register("application", function(exports, require, module) {
-  var Application, Chaplin, routes,
+  var Application, Chaplin, Layout, routes,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Chaplin = require('chaplin');
+
+  Layout = require('views/layout');
 
   routes = require('routes');
 
@@ -111,6 +113,10 @@ window.require.register("application", function(exports, require, module) {
       this.initMediator();
       this.startRouting();
       return typeof Object.freeze === "function" ? Object.freeze(this) : void 0;
+    };
+
+    Application.prototype.initLayout = function(options) {
+      return this.layout = new Layout(options);
     };
 
     Application.prototype.initMediator = function() {
@@ -471,9 +477,9 @@ window.require.register("views/home-page-view", function(exports, require, modul
       HomePageView.__super__.constructor.apply(this, arguments);
     }
 
-    HomePageView.prototype.container = 'body';
-
     HomePageView.prototype.id = 'home-page-view';
+
+    HomePageView.prototype.region = 'main';
 
     HomePageView.prototype.regions = {
       '#item-view-container': 'info'
@@ -556,13 +562,58 @@ window.require.register("views/inner-view", function(exports, require, module) {
   })(View);
   
 });
+window.require.register("views/layout", function(exports, require, module) {
+  var Chaplin, Layout,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Chaplin = require('chaplin');
+
+  module.exports = Layout = (function(_super) {
+
+    __extends(Layout, _super);
+
+    function Layout() {
+      Layout.__super__.constructor.apply(this, arguments);
+    }
+
+    Layout.prototype.listen = {
+      'dispatcher:dispatch mediator': 'navigate'
+    };
+
+    Layout.prototype.regions = {
+      '': 'main'
+    };
+
+    Layout.prototype.navigate = function(controller, params, route) {
+      var name,
+        _this = this;
+      name = route.name;
+      return setTimeout(function() {
+        var elems, selector;
+        elems = _this.$('nav > a[data-name]');
+        elems.removeClass('active');
+        selector = name === 'inner#other' ? "#content-container > nav > a[data-name='inner#index'], .inner-view > nav > a[data-name='inner#other']" : "nav > a[data-name='" + name + "']";
+        return _this.$(selector).addClass('active');
+      }, 25);
+    };
+
+    return Layout;
+
+  })(Chaplin.Layout);
+  
+});
 window.require.register("views/templates/home-page", function(exports, require, module) {
   module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
     helpers = helpers || Handlebars.helpers;
-    
+    var buffer = "", stack1, foundHelper, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
 
 
-    return "<div class=\"page-header\">\n  <h1>Composing <small>with <strong>Chaplin</strong></small></h1>\n</div>\n<p>\n  <a href=\"#/site\" class=\"btn btn-inverse btn-large\">\n    <strong>Explore</strong>\n  </a>\n</p>\n<div id=\"item-view-container\"></div>\n";});
+    buffer += "<div class=\"page-header\">\n  <h1>Composing <small>with <strong>Chaplin</strong></small></h1>\n</div>\n<p>\n  <a href=\"#";
+    foundHelper = helpers.url;
+    stack1 = foundHelper ? foundHelper.call(depth0, "site#index", {hash:{}}) : helperMissing.call(depth0, "url", "site#index", {hash:{}});
+    buffer += escapeExpression(stack1) + "\" class=\"btn btn-inverse btn-large\">\n    <strong>Explore</strong>\n  </a>\n</p>\n<div id=\"item-view-container\"></div>\n";
+    return buffer;});
 });
 window.require.register("views/templates/info", function(exports, require, module) {
   module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
@@ -570,40 +621,60 @@ window.require.register("views/templates/info", function(exports, require, modul
     var buffer = "", stack1, foundHelper, functionType="function", escapeExpression=this.escapeExpression, helperMissing=helpers.helperMissing;
 
 
-    buffer += "<div class=\"well\">\n  <h3>";
+    buffer += "<h3>";
     foundHelper = helpers.name;
     if (foundHelper) { stack1 = foundHelper.call(depth0, {hash:{}}); }
     else { stack1 = depth0.name; stack1 = typeof stack1 === functionType ? stack1() : stack1; }
-    buffer += escapeExpression(stack1) + "</h3>\n  <dl class=\"dl-horizontal\">\n    <dt>cid</dt>\n    <dd><code>";
+    buffer += escapeExpression(stack1) + "</h3>\n<dl>\n  <dt>cid</dt>\n  <dd><code>";
     foundHelper = helpers.cid;
     if (foundHelper) { stack1 = foundHelper.call(depth0, {hash:{}}); }
     else { stack1 = depth0.cid; stack1 = typeof stack1 === functionType ? stack1() : stack1; }
-    buffer += escapeExpression(stack1) + "</code></dd>\n\n    <dt>timestamp</dt>\n    <dd><code>";
+    buffer += escapeExpression(stack1) + "</code></dd>\n\n  <dt>timestamp</dt>\n  <dd><code>";
     stack1 = depth0.timestamp;
     foundHelper = helpers.formatDate;
     stack1 = foundHelper ? foundHelper.call(depth0, stack1, {hash:{}}) : helperMissing.call(depth0, "formatDate", stack1, {hash:{}});
-    buffer += escapeExpression(stack1) + "</code></dd>\n\n    <dt>region</dt>\n    <dd><code>";
+    buffer += escapeExpression(stack1) + "</code></dd>\n\n  <dt>region</dt>\n  <dd><code>";
     foundHelper = helpers.region;
     if (foundHelper) { stack1 = foundHelper.call(depth0, {hash:{}}); }
     else { stack1 = depth0.region; stack1 = typeof stack1 === functionType ? stack1() : stack1; }
-    buffer += escapeExpression(stack1) + "</code></dd>\n  </dl>\n</div>\n";
+    buffer += escapeExpression(stack1) + "</code></dd>\n</dl>\n";
     return buffer;});
 });
 window.require.register("views/templates/inner", function(exports, require, module) {
   module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
     helpers = helpers || Handlebars.helpers;
-    
+    var buffer = "", stack1, foundHelper, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
 
 
-    return "<nav>\n  <h3>Inner</h3>\n  <a href=\"#/site/inner\">Index</a>\n  <a href=\"#/site/inner/other\">Other</a>\n</nav>\n<div id=\"inner-container\"></div>\n";});
+    buffer += "<nav>\n  <h3>Inner</h3>\n  <a data-name=\"inner#index\" href=\"#";
+    foundHelper = helpers.url;
+    stack1 = foundHelper ? foundHelper.call(depth0, "inner#index", {hash:{}}) : helperMissing.call(depth0, "url", "inner#index", {hash:{}});
+    buffer += escapeExpression(stack1) + "\">Index</a>\n  <a data-name=\"inner#other\" href=\"#";
+    foundHelper = helpers.url;
+    stack1 = foundHelper ? foundHelper.call(depth0, "inner#other", {hash:{}}) : helperMissing.call(depth0, "url", "inner#other", {hash:{}});
+    buffer += escapeExpression(stack1) + "\">Other</a>\n</nav>\n<div id=\"inner-container\"></div>\n";
+    return buffer;});
 });
 window.require.register("views/templates/three-pane", function(exports, require, module) {
   module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
     helpers = helpers || Handlebars.helpers;
-    
+    var buffer = "", stack1, foundHelper, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
 
 
-    return "<div id=\"header-container\">\n  <a href=\"#/\"><strong>Return</strong></a>\n  <header id=\"header\"></header>\n</div>\n<div id=\"content-container\">\n  <nav>\n    <h2>Content</h2>\n    <a href=\"#/site\">Index</a>\n    <a href=\"#/site/other\">Other</a>\n    <a href=\"#/site/inner\">Inner</a>\n  </nav>\n  <section id=\"content\"></section>\n</div>\n<div id=\"footer-container\">\n  <footer id=\"footer\"></footer>\n</div>\n";});
+    buffer += "<div id=\"header-container\">\n  <a href=\"#";
+    foundHelper = helpers.url;
+    stack1 = foundHelper ? foundHelper.call(depth0, "home#index", {hash:{}}) : helperMissing.call(depth0, "url", "home#index", {hash:{}});
+    buffer += escapeExpression(stack1) + "\"><strong>Return</strong></a>\n  <header id=\"header\"></header>\n</div>\n<div id=\"content-container\">\n  <nav>\n    <h2>Content</h2>\n    <a data-name=\"site#index\" href=\"#";
+    foundHelper = helpers.url;
+    stack1 = foundHelper ? foundHelper.call(depth0, "site#index", {hash:{}}) : helperMissing.call(depth0, "url", "site#index", {hash:{}});
+    buffer += escapeExpression(stack1) + "\">Index</a>\n    <a data-name=\"site#other\" href=\"#";
+    foundHelper = helpers.url;
+    stack1 = foundHelper ? foundHelper.call(depth0, "site#other", {hash:{}}) : helperMissing.call(depth0, "url", "site#other", {hash:{}});
+    buffer += escapeExpression(stack1) + "\">Other</a>\n    <a data-name=\"inner#index\" href=\"#";
+    foundHelper = helpers.url;
+    stack1 = foundHelper ? foundHelper.call(depth0, "inner#index", {hash:{}}) : helperMissing.call(depth0, "url", "inner#index", {hash:{}});
+    buffer += escapeExpression(stack1) + "\">Inner</a>\n  </nav>\n  <section id=\"content\"></section>\n</div>\n<div id=\"footer-container\">\n  <footer id=\"footer\"></footer>\n</div>\n";
+    return buffer;});
 });
 window.require.register("views/three-pane-view", function(exports, require, module) {
   var ThreePaneView, View, template,
@@ -622,9 +693,9 @@ window.require.register("views/three-pane-view", function(exports, require, modu
       ThreePaneView.__super__.constructor.apply(this, arguments);
     }
 
-    ThreePaneView.prototype.container = 'body';
-
     ThreePaneView.prototype.id = 'three-pane-view';
+
+    ThreePaneView.prototype.region = 'main';
 
     ThreePaneView.prototype.regions = {
       '#header-container': 'header',

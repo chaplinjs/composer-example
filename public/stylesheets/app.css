@@ -422,6 +422,9 @@ body > div {
   border: 1px solid #cbcbcb;
   padding: 5px;
 }
+nav > a.active {
+  text-decoration: underline;
+}
 dt {
   float: left;
   width: 100px;

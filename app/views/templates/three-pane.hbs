@@ -1,13 +1,13 @@
 <div id="header-container">
-  <a href="#/"><strong>Return</strong></a>
+  <a href="#{{url "home#index"}}"><strong>Return</strong></a>
   <header id="header"></header>
 </div>
 <div id="content-container">
   <nav>
     <h2>Content</h2>
-    <a href="#/site">Index</a>
-    <a href="#/site/other">Other</a>
-    <a href="#/site/inner">Inner</a>
+    <a data-name="site#index" href="#{{url "site#index"}}">Index</a>
+    <a data-name="site#other" href="#{{url "site#other"}}">Other</a>
+    <a data-name="inner#index" href="#{{url "inner#index"}}">Inner</a>
   </nav>
   <section id="content"></section>
 </div>

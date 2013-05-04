@@ -1,5 +1,5 @@
 /*!
- * Chaplin 0.8.1
+ * Chaplin 0.9.0-pre
  *
  * Chaplin may be freely distributed under the MIT license.
  * For all details and documentation:
@@ -719,9 +719,11 @@ module.exports = Layout = (function(_super) {
 
   __extends(Layout, _super);
 
-  Layout.prototype.title = '';
+  Layout.prototype.el = 'body';
 
   Layout.prototype.keepElement = true;
+
+  Layout.prototype.title = '';
 
   Layout.prototype.globalRegions = null;
 
@@ -734,15 +736,11 @@ module.exports = Layout = (function(_super) {
   };
 
   function Layout(options) {
-    var _ref;
     if (options == null) {
       options = {};
     }
     this.openLink = __bind(this.openLink, this);
 
-    if ((_ref = options.el) == null) {
-      options.el = document.body;
-    }
     this.globalRegions = [];
     this.title = options.title;
     if (options.regions) {
