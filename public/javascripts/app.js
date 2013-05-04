@@ -98,7 +98,7 @@ window.require.register("application", function(exports, require, module) {
       Application.__super__.constructor.apply(this, arguments);
     }
 
-    Application.prototype.title = 'Brunch example application';
+    Application.prototype.title = 'Composing with Chaplin';
 
     Application.prototype.initialize = function() {
       Application.__super__.initialize.apply(this, arguments);
