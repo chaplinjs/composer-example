@@ -1,5 +1,5 @@
 /*!
- * Chaplin 0.9.0-pre
+ * Chaplin 0.9.0
  *
  * Chaplin may be freely distributed under the MIT license.
  * For all details and documentation:
