@@ -1,11 +1,9 @@
-Chaplin = require 'chaplin'
-
 module.exports = class Layout extends Chaplin.Layout
   listen:
     'dispatcher:dispatch mediator': 'navigate'
 
   regions:
-    '': 'main'
+    main: ''
 
   # Toggles nav links based on current route name.
   navigate: (controller, params, route) ->

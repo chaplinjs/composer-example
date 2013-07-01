@@ -73,9 +73,20 @@
     }
   };
 
+  var list = function() {
+    var result = [];
+    for (var item in modules) {
+      if (has(modules, item)) {
+        result.push(item);
+      }
+    }
+    return result;
+  };
+
   globals.require = require;
   globals.require.define = define;
   globals.require.register = define;
+  globals.require.list = list;
   globals.require.brunch = true;
 })();
 
@@ -92,7 +103,7 @@
     con[method] = con[method] || dummy;
   }
 })(window.console = window.console || {});
-;
+
 /*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -9690,7 +9701,7 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 }
 
 })( window );
-;
+
 /**
  * @license
  * Lo-Dash 1.2.0 (Custom Build) <http://lodash.com/>
@@ -15207,7 +15218,7 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
     window._ = _;
   }
 }(this));
-;
+
 //     Backbone.js 1.0.0
 
 //     (c) 2010-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -16779,43 +16790,84 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
   };
 
 }).call(this);
+
+/*
+
+Copyright (C) 2011 by Yehuda Katz
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+*/
+
+// lib/handlebars/browser-prefix.js
+var Handlebars = {};
+
+(function(Handlebars, undefined) {
 ;
 // lib/handlebars/base.js
 
-/*jshint eqnull:true*/
-this.Handlebars = {};
+Handlebars.VERSION = "1.0.0";
+Handlebars.COMPILER_REVISION = 4;
 
-(function(Handlebars) {
-
-Handlebars.VERSION = "1.0.rc.1";
+Handlebars.REVISION_CHANGES = {
+  1: '<= 1.0.rc.2', // 1.0.rc.2 is actually rev2 but doesn't report it
+  2: '== 1.0.0-rc.3',
+  3: '== 1.0.0-rc.4',
+  4: '>= 1.0.0'
+};
 
 Handlebars.helpers  = {};
 Handlebars.partials = {};
 
+var toString = Object.prototype.toString,
+    functionType = '[object Function]',
+    objectType = '[object Object]';
+
 Handlebars.registerHelper = function(name, fn, inverse) {
-  if(inverse) { fn.not = inverse; }
-  this.helpers[name] = fn;
+  if (toString.call(name) === objectType) {
+    if (inverse || fn) { throw new Handlebars.Exception('Arg not supported with multiple helpers'); }
+    Handlebars.Utils.extend(this.helpers, name);
+  } else {
+    if (inverse) { fn.not = inverse; }
+    this.helpers[name] = fn;
+  }
 };
 
 Handlebars.registerPartial = function(name, str) {
-  this.partials[name] = str;
+  if (toString.call(name) === objectType) {
+    Handlebars.Utils.extend(this.partials,  name);
+  } else {
+    this.partials[name] = str;
+  }
 };
 
 Handlebars.registerHelper('helperMissing', function(arg) {
   if(arguments.length === 2) {
     return undefined;
   } else {
-    throw new Error("Could not find property '" + arg + "'");
+    throw new Error("Missing helper: '" + arg + "'");
   }
 });
-
-var toString = Object.prototype.toString, functionType = "[object Function]";
 
 Handlebars.registerHelper('blockHelperMissing', function(context, options) {
   var inverse = options.inverse || function() {}, fn = options.fn;
 
-
-  var ret = "";
   var type = toString.call(context);
 
   if(type === functionType) { context = context.call(this); }
@@ -16844,63 +16896,97 @@ Handlebars.createFrame = Object.create || function(object) {
   return obj;
 };
 
+Handlebars.logger = {
+  DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, level: 3,
+
+  methodMap: {0: 'debug', 1: 'info', 2: 'warn', 3: 'error'},
+
+  // can be overridden in the host environment
+  log: function(level, obj) {
+    if (Handlebars.logger.level <= level) {
+      var method = Handlebars.logger.methodMap[level];
+      if (typeof console !== 'undefined' && console[method]) {
+        console[method].call(console, obj);
+      }
+    }
+  }
+};
+
+Handlebars.log = function(level, obj) { Handlebars.logger.log(level, obj); };
+
 Handlebars.registerHelper('each', function(context, options) {
   var fn = options.fn, inverse = options.inverse;
-  var ret = "", data;
+  var i = 0, ret = "", data;
+
+  var type = toString.call(context);
+  if(type === functionType) { context = context.call(this); }
 
   if (options.data) {
     data = Handlebars.createFrame(options.data);
   }
 
-  if(context && context.length > 0) {
-    for(var i=0, j=context.length; i<j; i++) {
-      if (data) { data.index = i; }
-      ret = ret + fn(context[i], { data: data });
+  if(context && typeof context === 'object') {
+    if(context instanceof Array){
+      for(var j = context.length; i<j; i++) {
+        if (data) { data.index = i; }
+        ret = ret + fn(context[i], { data: data });
+      }
+    } else {
+      for(var key in context) {
+        if(context.hasOwnProperty(key)) {
+          if(data) { data.key = key; }
+          ret = ret + fn(context[key], {data: data});
+          i++;
+        }
+      }
     }
-  } else {
+  }
+
+  if(i === 0){
     ret = inverse(this);
   }
+
   return ret;
 });
 
-Handlebars.registerHelper('if', function(context, options) {
-  var type = toString.call(context);
-  if(type === functionType) { context = context.call(this); }
+Handlebars.registerHelper('if', function(conditional, options) {
+  var type = toString.call(conditional);
+  if(type === functionType) { conditional = conditional.call(this); }
 
-  if(!context || Handlebars.Utils.isEmpty(context)) {
+  if(!conditional || Handlebars.Utils.isEmpty(conditional)) {
     return options.inverse(this);
   } else {
     return options.fn(this);
   }
 });
 
-Handlebars.registerHelper('unless', function(context, options) {
-  var fn = options.fn, inverse = options.inverse;
-  options.fn = inverse;
-  options.inverse = fn;
-
-  return Handlebars.helpers['if'].call(this, context, options);
+Handlebars.registerHelper('unless', function(conditional, options) {
+  return Handlebars.helpers['if'].call(this, conditional, {fn: options.inverse, inverse: options.fn});
 });
 
 Handlebars.registerHelper('with', function(context, options) {
-  return options.fn(context);
+  var type = toString.call(context);
+  if(type === functionType) { context = context.call(this); }
+
+  if (!Handlebars.Utils.isEmpty(context)) return options.fn(context);
 });
 
-Handlebars.registerHelper('log', function(context) {
-  Handlebars.log(context);
+Handlebars.registerHelper('log', function(context, options) {
+  var level = options.data && options.data.level != null ? parseInt(options.data.level, 10) : 1;
+  Handlebars.log(level, context);
 });
-
-}(this.Handlebars));
 ;
 // lib/handlebars/utils.js
+
+var errorProps = ['description', 'fileName', 'lineNumber', 'message', 'name', 'number', 'stack'];
+
 Handlebars.Exception = function(message) {
   var tmp = Error.prototype.constructor.apply(this, arguments);
 
-  for (var p in tmp) {
-    if (tmp.hasOwnProperty(p)) { this[p] = tmp[p]; }
+  // Unfortunately errors are not enumerable in Chrome (at least), so `for prop in tmp` doesn't work.
+  for (var idx = 0; idx < errorProps.length; idx++) {
+    this[errorProps[idx]] = tmp[errorProps[idx]];
   }
-
-  this.message = tmp.message;
 };
 Handlebars.Exception.prototype = new Error();
 
@@ -16912,52 +16998,61 @@ Handlebars.SafeString.prototype.toString = function() {
   return this.string.toString();
 };
 
-(function() {
-  var escape = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#x27;",
-    "`": "&#x60;"
-  };
+var escape = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#x27;",
+  "`": "&#x60;"
+};
 
-  var badChars = /[&<>"'`]/g;
-  var possible = /[&<>"'`]/;
+var badChars = /[&<>"'`]/g;
+var possible = /[&<>"'`]/;
 
-  var escapeChar = function(chr) {
-    return escape[chr] || "&amp;";
-  };
+var escapeChar = function(chr) {
+  return escape[chr] || "&amp;";
+};
 
-  Handlebars.Utils = {
-    escapeExpression: function(string) {
-      // don't escape SafeStrings, since they're already safe
-      if (string instanceof Handlebars.SafeString) {
-        return string.toString();
-      } else if (string == null || string === false) {
-        return "";
-      }
-
-      if(!possible.test(string)) { return string; }
-      return string.replace(badChars, escapeChar);
-    },
-
-    isEmpty: function(value) {
-      if (typeof value === "undefined") {
-        return true;
-      } else if (value === null) {
-        return true;
-      } else if (value === false) {
-        return true;
-      } else if(Object.prototype.toString.call(value) === "[object Array]" && value.length === 0) {
-        return true;
-      } else {
-        return false;
+Handlebars.Utils = {
+  extend: function(obj, value) {
+    for(var key in value) {
+      if(value.hasOwnProperty(key)) {
+        obj[key] = value[key];
       }
     }
-  };
-})();;
+  },
+
+  escapeExpression: function(string) {
+    // don't escape SafeStrings, since they're already safe
+    if (string instanceof Handlebars.SafeString) {
+      return string.toString();
+    } else if (string == null || string === false) {
+      return "";
+    }
+
+    // Force a string conversion as this will be done by the append regardless and
+    // the regex test will do this transparently behind the scenes, causing issues if
+    // an object's to string has escaped characters in it.
+    string = string.toString();
+
+    if(!possible.test(string)) { return string; }
+    return string.replace(badChars, escapeChar);
+  },
+
+  isEmpty: function(value) {
+    if (!value && value !== 0) {
+      return true;
+    } else if(toString.call(value) === "[object Array]" && value.length === 0) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+};
+;
 // lib/handlebars/runtime.js
+
 Handlebars.VM = {
   template: function(templateSpec) {
     // Just add water
@@ -16968,39 +17063,73 @@ Handlebars.VM = {
       program: function(i, fn, data) {
         var programWrapper = this.programs[i];
         if(data) {
-          return Handlebars.VM.program(fn, data);
-        } else if(programWrapper) {
-          return programWrapper;
-        } else {
-          programWrapper = this.programs[i] = Handlebars.VM.program(fn);
-          return programWrapper;
+          programWrapper = Handlebars.VM.program(i, fn, data);
+        } else if (!programWrapper) {
+          programWrapper = this.programs[i] = Handlebars.VM.program(i, fn);
         }
+        return programWrapper;
+      },
+      merge: function(param, common) {
+        var ret = param || common;
+
+        if (param && common) {
+          ret = {};
+          Handlebars.Utils.extend(ret, common);
+          Handlebars.Utils.extend(ret, param);
+        }
+        return ret;
       },
       programWithDepth: Handlebars.VM.programWithDepth,
-      noop: Handlebars.VM.noop
+      noop: Handlebars.VM.noop,
+      compilerInfo: null
     };
 
     return function(context, options) {
       options = options || {};
-      return templateSpec.call(container, Handlebars, context, options.helpers, options.partials, options.data);
+      var result = templateSpec.call(container, Handlebars, context, options.helpers, options.partials, options.data);
+
+      var compilerInfo = container.compilerInfo || [],
+          compilerRevision = compilerInfo[0] || 1,
+          currentRevision = Handlebars.COMPILER_REVISION;
+
+      if (compilerRevision !== currentRevision) {
+        if (compilerRevision < currentRevision) {
+          var runtimeVersions = Handlebars.REVISION_CHANGES[currentRevision],
+              compilerVersions = Handlebars.REVISION_CHANGES[compilerRevision];
+          throw "Template was precompiled with an older version of Handlebars than the current runtime. "+
+                "Please update your precompiler to a newer version ("+runtimeVersions+") or downgrade your runtime to an older version ("+compilerVersions+").";
+        } else {
+          // Use the embedded version info since the runtime doesn't know about this revision yet
+          throw "Template was precompiled with a newer version of Handlebars than the current runtime. "+
+                "Please update your runtime to a newer version ("+compilerInfo[1]+").";
+        }
+      }
+
+      return result;
     };
   },
 
-  programWithDepth: function(fn, data, $depth) {
-    var args = Array.prototype.slice.call(arguments, 2);
+  programWithDepth: function(i, fn, data /*, $depth */) {
+    var args = Array.prototype.slice.call(arguments, 3);
 
-    return function(context, options) {
+    var program = function(context, options) {
       options = options || {};
 
       return fn.apply(this, [context, options.data || data].concat(args));
     };
+    program.program = i;
+    program.depth = args.length;
+    return program;
   },
-  program: function(fn, data) {
-    return function(context, options) {
+  program: function(i, fn, data) {
+    var program = function(context, options) {
       options = options || {};
 
       return fn(context, options.data || data);
     };
+    program.program = i;
+    program.depth = 0;
+    return program;
   },
   noop: function() { return ""; },
   invokePartial: function(partial, name, context, helpers, partials, data) {
@@ -17021,61 +17150,66 @@ Handlebars.VM = {
 
 Handlebars.template = Handlebars.VM.template;
 ;
+// lib/handlebars/browser-suffix.js
+})(Handlebars);
 ;
+
 /*!
- * Chaplin 0.9.0-pre
+ * Chaplin 0.10.0
  *
  * Chaplin may be freely distributed under the MIT license.
  * For all details and documentation:
  * http://chaplinjs.org
  */
 
-// Dirty hack for require-ing backbone and underscore.
-(function() {
-  var deps = {
-    backbone: window.Backbone, underscore: window._
+(function(){
+
+var loader = (function() {
+  var modules = {};
+  var cache = {};
+
+  var dummy = function() {return function() {};};
+  var initModule = function(name, definition) {
+    var module = {id: name, exports: {}};
+    definition(module.exports, dummy(), module);
+    var exports = cache[name] = module.exports;
+    return exports;
   };
 
-  for (var name in deps) {
-    (function(name) {
-      var definition = {};
-      definition[name] = function(exports, require, module) {
-        module.exports = deps[name];
-      };
+  var loader = function(path) {
+    if (cache.hasOwnProperty(path)) return cache[path];
+    if (modules.hasOwnProperty(path)) return initModule(path, modules[path]);
+    throw new Error('Cannot find module "' + name + '"');
+  };
 
-      try {
-        require(item);
-      } catch(e) {
-        require.define(definition);
-      }
-    })(name);
-  }
+  loader.register = function(bundle, fn) {
+    modules[bundle] = fn;
+  };
+  return loader;
 })();
 
-require.define({'chaplin/application': function(exports, require, module) {
+loader.register('chaplin/application', function(e, r, module) {
 'use strict';
 
 var Application, Backbone, Composer, Dispatcher, EventBroker, Layout, Router, mediator, _;
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-mediator = require('chaplin/mediator');
+mediator = loader('chaplin/mediator');
 
-Dispatcher = require('chaplin/dispatcher');
+Dispatcher = loader('chaplin/dispatcher');
 
-Layout = require('chaplin/views/layout');
+Layout = loader('chaplin/views/layout');
 
-Composer = require('chaplin/composer');
+Composer = loader('chaplin/composer');
 
-Router = require('chaplin/lib/router');
+Router = loader('chaplin/lib/router');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
 module.exports = Application = (function() {
-
-  function Application() {}
 
   Application.extend = Backbone.Model.extend;
 
@@ -17091,7 +17225,31 @@ module.exports = Application = (function() {
 
   Application.prototype.composer = null;
 
-  Application.prototype.initialize = function() {};
+  Application.prototype.initialized = false;
+
+  function Application(options) {
+    if (options == null) {
+      options = {};
+    }
+    this.initialize(options);
+  }
+
+  Application.prototype.initialize = function(options) {
+    if (options == null) {
+      options = {};
+    }
+    if (this.initialized) {
+      throw new Error('Application#initialize: App was already initialized');
+    }
+    this.initRouter(options.routes, options);
+    this.initDispatcher(options);
+    this.initLayout(options);
+    this.initComposer(options);
+    this.initMediator();
+    this.startRouting();
+    this.initialized = true;
+    return typeof Object.freeze === "function" ? Object.freeze(this) : void 0;
+  };
 
   Application.prototype.initDispatcher = function(options) {
     return this.dispatcher = new Dispatcher(options);
@@ -17115,6 +17273,10 @@ module.exports = Application = (function() {
     return this.composer = new Composer(options);
   };
 
+  Application.prototype.initMediator = function() {
+    return mediator.seal();
+  };
+
   Application.prototype.initRouter = function(routes, options) {
     this.router = new Router(options);
     return typeof routes === "function" ? routes(this.router.match) : void 0;
@@ -17127,10 +17289,11 @@ module.exports = Application = (function() {
   Application.prototype.disposed = false;
 
   Application.prototype.dispose = function() {
-    var prop, properties, _i, _len;
+    var frozen, prop, properties, _i, _len;
     if (this.disposed) {
       return;
     }
+    frozen = typeof Object.isFrozen === "function" ? Object.isFrozen(this) : void 0;
     properties = ['dispatcher', 'layout', 'router', 'composer'];
     for (_i = 0, _len = properties.length; _i < _len; _i++) {
       prop = properties[_i];
@@ -17138,7 +17301,9 @@ module.exports = Application = (function() {
         continue;
       }
       this[prop].dispose();
-      delete this[prop];
+      if (!frozen) {
+        delete this[prop];
+      }
     }
     this.disposed = true;
     return typeof Object.freeze === "function" ? Object.freeze(this) : void 0;
@@ -17148,16 +17313,16 @@ module.exports = Application = (function() {
 
 })();
 
-}});;require.define({'chaplin/mediator': function(exports, require, module) {
+});;loader.register('chaplin/mediator', function(e, r, module) {
 'use strict';
 
 var Backbone, mediator, support, utils;
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-support = require('chaplin/lib/support');
+support = loader('chaplin/lib/support');
 
-utils = require('chaplin/lib/utils');
+utils = loader('chaplin/lib/utils');
 
 mediator = {};
 
@@ -17181,18 +17346,18 @@ utils.readonly(mediator, 'seal');
 
 module.exports = mediator;
 
-}});;require.define({'chaplin/dispatcher': function(exports, require, module) {
+});;loader.register('chaplin/dispatcher', function(e, r, module) {
 'use strict';
 
 var Backbone, Dispatcher, EventBroker, utils, _;
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-utils = require('chaplin/lib/utils');
+utils = loader('chaplin/lib/utils');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
 module.exports = Dispatcher = (function() {
 
@@ -17268,9 +17433,9 @@ module.exports = Dispatcher = (function() {
       this.publishEvent('beforeControllerDispose', this.currentController);
       this.currentController.dispose(params, route, options);
     }
-    controller[route.action](params, route, options);
     this.currentController = controller;
     this.currentParams = params;
+    controller[route.action](params, route, options);
     if (controller.redirected) {
       return;
     }
@@ -17330,20 +17495,20 @@ module.exports = Dispatcher = (function() {
 
 })();
 
-}});;require.define({'chaplin/composer': function(exports, require, module) {
+});;loader.register('chaplin/composer', function(e, r, module) {
 'use strict';
 
 var Backbone, Composer, Composition, EventBroker, utils, _;
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-utils = require('chaplin/lib/utils');
+utils = loader('chaplin/lib/utils');
 
-Composition = require('chaplin/lib/composition');
+Composition = loader('chaplin/lib/composition');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
 module.exports = Composer = (function() {
 
@@ -17472,17 +17637,17 @@ module.exports = Composer = (function() {
 
 })();
 
-}});;require.define({'chaplin/controllers/controller': function(exports, require, module) {
+});;loader.register('chaplin/controllers/controller', function(e, r, module) {
 'use strict';
 
 var Backbone, Controller, EventBroker, _,
   __hasProp = {}.hasOwnProperty;
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
 module.exports = Controller = (function() {
 
@@ -17522,24 +17687,13 @@ module.exports = Controller = (function() {
   };
 
   Controller.prototype.redirectTo = function(url, options) {
-    if (options == null) {
-      options = {};
-    }
     this.redirected = true;
-    return this.publishEvent('!router:route', url, options, function(routed) {
-      if (!routed) {
-        throw new Error('Controller#redirectTo: no route matched');
-      }
-    });
+    return this.publishEvent('!router:route', url, options);
   };
 
   Controller.prototype.redirectToRoute = function(name, params, options) {
     this.redirected = true;
-    return this.publishEvent('!router:routeByName', name, params, options, function(routed) {
-      if (!routed) {
-        throw new Error('Controller#redirectToRoute: no route matched');
-      }
-    });
+    return this.publishEvent('!router:routeByName', name, params, options);
   };
 
   Controller.prototype.disposed = false;
@@ -17568,22 +17722,22 @@ module.exports = Controller = (function() {
 
 })();
 
-}});;require.define({'chaplin/models/collection': function(exports, require, module) {
+});;loader.register('chaplin/models/collection', function(e, r, module) {
 'use strict';
 
 var Backbone, Collection, EventBroker, Model, utils, _,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
-Model = require('chaplin/models/model');
+Model = loader('chaplin/models/model');
 
-utils = require('chaplin/lib/utils');
+utils = loader('chaplin/lib/utils');
 
 module.exports = Collection = (function(_super) {
 
@@ -17628,20 +17782,20 @@ module.exports = Collection = (function(_super) {
 
 })(Backbone.Collection);
 
-}});;require.define({'chaplin/models/model': function(exports, require, module) {
+});;loader.register('chaplin/models/model', function(e, r, module) {
 'use strict';
 
 var Backbone, EventBroker, Model, serializeAttributes, serializeModelAttributes, utils, _,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-utils = require('chaplin/lib/utils');
+utils = loader('chaplin/lib/utils');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
 serializeAttributes = function(model, attributes, modelStack) {
   var delegator, key, otherModel, serializedModels, value, _i, _len, _ref;
@@ -17719,7 +17873,7 @@ module.exports = Model = (function(_super) {
 
 })(Backbone.Model);
 
-}});;require.define({'chaplin/views/layout': function(exports, require, module) {
+});;loader.register('chaplin/views/layout', function(e, r, module) {
 'use strict';
 
 var $, Backbone, EventBroker, Layout, View, utils, _,
@@ -17727,15 +17881,15 @@ var $, Backbone, EventBroker, Layout, View, utils, _,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-utils = require('chaplin/lib/utils');
+utils = loader('chaplin/lib/utils');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
-View = require('chaplin/views/view');
+View = loader('chaplin/views/view');
 
 $ = Backbone.$;
 
@@ -17827,7 +17981,7 @@ module.exports = Layout = (function(_super) {
   };
 
   Layout.prototype.openLink = function(event) {
-    var $el, callback, el, external, href, isAnchor, options, path, query, skipRouting, type, _ref;
+    var $el, el, external, href, isAnchor, options, path, query, skipRouting, type, _ref;
     if (utils.modifierKeyPressed(event)) {
       return;
     }
@@ -17866,14 +18020,8 @@ module.exports = Layout = (function(_super) {
     options = {
       query: query
     };
-    callback = function(routed) {
-      if (routed) {
-        event.preventDefault();
-      } else if (!isAnchor) {
-        location.href = path;
-      }
-    };
-    this.publishEvent('!router:route', path, options, callback);
+    this.publishEvent('!router:route', path, options);
+    event.preventDefault();
   };
 
   Layout.prototype.registerRegionHandler = function(instance, name, selector) {
@@ -17898,8 +18046,8 @@ module.exports = Layout = (function(_super) {
     _ref = utils.getAllPropertyVersions(instance, 'regions');
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       version = _ref[_i];
-      for (selector in version) {
-        name = version[selector];
+      for (name in version) {
+        selector = version[name];
         this.registerGlobalRegion(instance, name, selector);
       }
     }
@@ -17956,20 +18104,20 @@ module.exports = Layout = (function(_super) {
 
 })(View);
 
-}});;require.define({'chaplin/views/view': function(exports, require, module) {
+});;loader.register('chaplin/views/view', function(e, r, module) {
 'use strict';
 
 var $, Backbone, EventBroker, View, utils, _,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-utils = require('chaplin/lib/utils');
+utils = loader('chaplin/lib/utils');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
 $ = Backbone.$;
 
@@ -18003,7 +18151,7 @@ module.exports = View = (function(_super) {
     var render,
       _this = this;
     if (options) {
-      _.extend(this, _.pick(options, ['autoAttach', 'autoRender', 'container', 'containerMethod', 'region']));
+      _.extend(this, _.pick(options, ['autoAttach', 'autoRender', 'container', 'containerMethod', 'region', 'regions']));
     }
     render = this.render;
     this.render = function() {
@@ -18103,8 +18251,34 @@ module.exports = View = (function(_super) {
     }
   };
 
-  View.prototype.undelegate = function() {
-    return this.$el.unbind(".delegate" + this.cid);
+  View.prototype.undelegate = function(eventName, second, third) {
+    var events, handler, list, selector,
+      _this = this;
+    if (eventName) {
+      if (typeof eventName !== 'string') {
+        throw new TypeError('View#undelegate: first argument must be a string');
+      }
+      if (arguments.length === 2) {
+        if (typeof second === 'string') {
+          selector = second;
+        } else {
+          handler = second;
+        }
+      } else if (arguments.length === 3) {
+        selector = second;
+        if (typeof selector !== 'string') {
+          throw new TypeError('View#undelegate: ' + 'second argument must be a string');
+        }
+        handler = third;
+      }
+      list = _.map(eventName.split(' '), function(event) {
+        return "" + event + ".delegate" + _this.cid;
+      });
+      events = list.join(' ');
+      return this.$el.off(events, selector || null);
+    } else {
+      return this.$el.off(".delegate" + this.cid);
+    }
   };
 
   View.prototype.delegateListeners = function() {
@@ -18143,7 +18317,7 @@ module.exports = View = (function(_super) {
     }
   };
 
-  View.prototype.registerRegion = function(selector, name) {
+  View.prototype.registerRegion = function(name, selector) {
     return this.publishEvent('!region:register', this, name, selector);
   };
 
@@ -18277,7 +18451,7 @@ module.exports = View = (function(_super) {
 
 })(Backbone.View);
 
-}});;require.define({'chaplin/views/collection_view': function(exports, require, module) {
+});;loader.register('chaplin/views/collection_view', function(e, r, module) {
 'use strict';
 
 var $, Backbone, CollectionView, View, _,
@@ -18285,11 +18459,11 @@ var $, Backbone, CollectionView, View, _,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-View = require('chaplin/views/view');
+View = loader('chaplin/views/view');
 
 $ = Backbone.$;
 
@@ -18323,7 +18497,7 @@ module.exports = CollectionView = (function(_super) {
 
   CollectionView.prototype.$loading = null;
 
-  CollectionView.prototype.itemSelector = null;
+  CollectionView.prototype.itemSelector = void 0;
 
   CollectionView.prototype.filterer = null;
 
@@ -18592,6 +18766,7 @@ module.exports = CollectionView = (function(_super) {
         }, this.animationDuration);
       }
     }
+    return view;
   };
 
   CollectionView.prototype.removeViewForItem = function(item) {
@@ -18637,20 +18812,20 @@ module.exports = CollectionView = (function(_super) {
 
 })(View);
 
-}});;require.define({'chaplin/lib/route': function(exports, require, module) {
+});;loader.register('chaplin/lib/route', function(e, r, module) {
 'use strict';
 
 var Backbone, Controller, EventBroker, Route, _,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   __hasProp = {}.hasOwnProperty;
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
-Controller = require('chaplin/controllers/controller');
+Controller = loader('chaplin/controllers/controller');
 
 module.exports = Route = (function() {
   var escapeRegExp;
@@ -18851,21 +19026,21 @@ module.exports = Route = (function() {
 
 })();
 
-}});;require.define({'chaplin/lib/router': function(exports, require, module) {
+});;loader.register('chaplin/lib/router', function(e, r, module) {
 'use strict';
 
 var Backbone, EventBroker, Route, Router, utils, _,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
-Route = require('chaplin/lib/route');
+Route = loader('chaplin/lib/route');
 
-utils = require('chaplin/lib/utils');
+utils = loader('chaplin/lib/utils');
 
 module.exports = Router = (function() {
 
@@ -18946,37 +19121,15 @@ module.exports = Router = (function() {
         return true;
       }
     }
-    return false;
-  };
-
-  Router.prototype.routeHandler = function(path, options, callback) {
-    var routed;
-    if (arguments.length === 2 && typeof options === 'function') {
-      callback = options;
-      options = {};
-    }
-    routed = this.route(path, options);
-    return typeof callback === "function" ? callback(routed) : void 0;
-  };
-
-  Router.prototype.routeByNameHandler = function(name, params, options, callback) {
-    var path, routed;
-    if (arguments.length === 3 && typeof options === 'function') {
-      callback = options;
-      options = {};
-    }
-    path = this.reverse(name, params);
-    if (typeof path === 'string') {
-      routed = this.route(path, options);
-      return typeof callback === "function" ? callback(routed) : void 0;
-    } else {
-      return typeof callback === "function" ? callback(false) : void 0;
-    }
+    throw new Error('Router#route: request was not routed');
   };
 
   Router.prototype.reverse = function(criteria, params) {
     var handler, handlers, reversed, root, url, _i, _len;
     root = this.options.root;
+    if ((params != null) && typeof params !== 'object') {
+      throw new TypeError('Router#reverse: params must be an array or an ' + 'object');
+    }
     handlers = Backbone.history.handlers;
     for (_i = 0, _len = handlers.length; _i < _len; _i++) {
       handler = handlers[_i];
@@ -18989,7 +19142,23 @@ module.exports = Router = (function() {
         return url;
       }
     }
-    return false;
+    throw new Error('Router#reverse: invalid route specified');
+  };
+
+  Router.prototype.routeHandler = function(path, options) {
+    if (typeof options === 'function') {
+      options = {};
+    }
+    return this.route(path, options);
+  };
+
+  Router.prototype.routeByNameHandler = function(name, params, options, callback) {
+    var path;
+    if (arguments.length === 3 && typeof options === 'function') {
+      options = {};
+    }
+    path = this.reverse(name, params);
+    return this.route(path, options);
   };
 
   Router.prototype.reverseHandler = function(name, params, callback) {
@@ -19029,7 +19198,7 @@ module.exports = Router = (function() {
 
 })();
 
-}});;require.define({'chaplin/lib/delayer': function(exports, require, module) {
+});;loader.register('chaplin/lib/delayer', function(e, r, module) {
 'use strict';
 
 var Delayer;
@@ -19108,13 +19277,13 @@ if (typeof Object.freeze === "function") {
 
 module.exports = Delayer;
 
-}});;require.define({'chaplin/lib/event_broker': function(exports, require, module) {
+});;loader.register('chaplin/lib/event_broker', function(e, r, module) {
 'use strict';
 
 var EventBroker, mediator,
   __slice = [].slice;
 
-mediator = require('chaplin/mediator');
+mediator = loader('chaplin/mediator');
 
 EventBroker = {
   subscribeEvent: function(type, handler) {
@@ -19155,7 +19324,7 @@ if (typeof Object.freeze === "function") {
 
 module.exports = EventBroker;
 
-}});;require.define({'chaplin/lib/support': function(exports, require, module) {
+});;loader.register('chaplin/lib/support', function(e, r, module) {
 'use strict';
 
 var support;
@@ -19180,17 +19349,17 @@ support = {
 
 module.exports = support;
 
-}});;require.define({'chaplin/lib/composition': function(exports, require, module) {
+});;loader.register('chaplin/lib/composition', function(e, r, module) {
 'use strict';
 
 var Backbone, Composition, EventBroker, _,
   __hasProp = {}.hasOwnProperty;
 
-_ = require('underscore');
+_ = loader('underscore');
 
-Backbone = require('backbone');
+Backbone = loader('backbone');
 
-EventBroker = require('chaplin/lib/event_broker');
+EventBroker = loader('chaplin/lib/event_broker');
 
 module.exports = Composition = (function() {
 
@@ -19268,7 +19437,7 @@ module.exports = Composition = (function() {
 
 })();
 
-}});;require.define({'chaplin/lib/sync_machine': function(exports, require, module) {
+});;loader.register('chaplin/lib/sync_machine', function(e, r, module) {
 'use strict';
 
 var STATE_CHANGE, SYNCED, SYNCING, SyncMachine, UNSYNCED, event, _fn, _i, _len, _ref;
@@ -19355,16 +19524,16 @@ if (typeof Object.freeze === "function") {
 
 module.exports = SyncMachine;
 
-}});;require.define({'chaplin/lib/utils': function(exports, require, module) {
+});;loader.register('chaplin/lib/utils', function(e, r, module) {
 'use strict';
 
 var support, utils, _,
   __slice = [].slice,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-_ = require('underscore');
+_ = loader('underscore');
 
-support = require('chaplin/lib/support');
+support = loader('chaplin/lib/support');
 
 utils = {
   beget: (function() {
@@ -19450,21 +19619,18 @@ if (typeof Object.seal === "function") {
 
 module.exports = utils;
 
-}});;require.define({'chaplin/lib/helpers': function(exports, require, module) {
+});;loader.register('chaplin/lib/helpers', function(e, r, module) {
 'use strict';
 
 var helpers, mediator;
 
-mediator = require('chaplin/mediator');
+mediator = loader('chaplin/mediator');
 
 helpers = {
   reverse: function(routeName, params) {
     var url;
     url = null;
     mediator.publish('!router:reverse', routeName, params, function(result) {
-      if (result === false) {
-        throw new Error('Chaplin.helpers.reverse: invalid route specified.');
-      }
       return url = result;
     });
     return url;
@@ -19473,29 +19639,55 @@ helpers = {
 
 module.exports = helpers;
 
-}});;require.define({'chaplin': function(exports, require, module) {
+});;loader.register('chaplin', function(e, r, module) {
 
 module.exports = {
-  Application: require('chaplin/application'),
-  mediator: require('chaplin/mediator'),
-  Dispatcher: require('chaplin/dispatcher'),
-  Controller: require('chaplin/controllers/controller'),
-  Composer: require('chaplin/composer'),
-  Composition: require('chaplin/lib/composition'),
-  Collection: require('chaplin/models/collection'),
-  Model: require('chaplin/models/model'),
-  Layout: require('chaplin/views/layout'),
-  View: require('chaplin/views/view'),
-  CollectionView: require('chaplin/views/collection_view'),
-  Route: require('chaplin/lib/route'),
-  Router: require('chaplin/lib/router'),
-  Delayer: require('chaplin/lib/delayer'),
-  EventBroker: require('chaplin/lib/event_broker'),
-  helpers: require('chaplin/lib/helpers'),
-  support: require('chaplin/lib/support'),
-  SyncMachine: require('chaplin/lib/sync_machine'),
-  utils: require('chaplin/lib/utils')
+  Application: loader('chaplin/application'),
+  mediator: loader('chaplin/mediator'),
+  Dispatcher: loader('chaplin/dispatcher'),
+  Controller: loader('chaplin/controllers/controller'),
+  Composer: loader('chaplin/composer'),
+  Composition: loader('chaplin/lib/composition'),
+  Collection: loader('chaplin/models/collection'),
+  Model: loader('chaplin/models/model'),
+  Layout: loader('chaplin/views/layout'),
+  View: loader('chaplin/views/view'),
+  CollectionView: loader('chaplin/views/collection_view'),
+  Route: loader('chaplin/lib/route'),
+  Router: loader('chaplin/lib/router'),
+  Delayer: loader('chaplin/lib/delayer'),
+  EventBroker: loader('chaplin/lib/event_broker'),
+  helpers: loader('chaplin/lib/helpers'),
+  support: loader('chaplin/lib/support'),
+  SyncMachine: loader('chaplin/lib/sync_machine'),
+  utils: loader('chaplin/lib/utils')
 };
 
-}});
-;
+});
+var regDeps = function(Backbone, _) {
+  loader.register('backbone', function(exports, require, module) {
+    module.exports = Backbone;
+  });
+  loader.register('underscore', function(exports, require, module) {
+    module.exports = _;
+  });
+};
+
+if (typeof define === 'function' && define.amd) {
+  define(['backbone', 'underscore'], function(Backbone, _) {
+    regDeps(Backbone, _);
+    return loader('chaplin');
+  });
+} else if (typeof module === 'object' && module && module.exports) {
+  regDeps(require('backbone').Backbone, require('underscore'));
+  module.exports = loader('chaplin');
+} else if (typeof require === 'function') {
+  regDeps(window.Backbone, window._);
+  window.Chaplin = loader('chaplin');
+} else {
+  throw new Error('Chaplin requires Common.js or AMD modules');
+}
+
+})();
+
+//# sourceMappingURL=vendor.js.map

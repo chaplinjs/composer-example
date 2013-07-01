@@ -1,4 +1,3 @@
-Chaplin = require 'chaplin'
 utils = require 'lib/utils'
 
 # Application-specific feature detection

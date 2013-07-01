@@ -6,7 +6,7 @@ module.exports = class ThreePaneView extends View
   id: 'three-pane-view'
   region: 'main'
   regions:
-    '#header-container': 'header'
-    '#content': 'content'
-    '#footer-container': 'footer'
+    header: '#header-container'
+    content: '#content'
+    footer: '#footer-container'
   template: template

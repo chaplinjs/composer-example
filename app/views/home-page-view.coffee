@@ -5,5 +5,5 @@ module.exports = class HomePageView extends View
   id: 'home-page-view'
   region: 'main'
   regions:
-    '#item-view-container': 'info'
+    info: '#item-view-container'
   template: template
