@@ -5,6 +5,8 @@ Example that describes Chaplin regions and compositions.
 ## Running locally
 
 * Install [Brunch](http://brunch.io): `npm install -g brunch`
+* Install brunch packages: `npm install`
+* Install [Bower](http://bower.io) packages: `bower install`
 * Run `brunch watch --server` in current directory
 
 ## License

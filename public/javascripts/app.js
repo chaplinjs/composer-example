@@ -137,7 +137,6 @@ module.exports = Controller = (function(_super) {
 
   Controller.prototype.beforeAction = function(params, route) {
     var _ref1;
-    console.log(121, route.controller);
     if ((_ref1 = route.controller) === 'inner' || _ref1 === 'site') {
       this.compose('site', ThreePaneView);
       this.compose('header', function() {
