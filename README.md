@@ -10,6 +10,7 @@ Example that describes Chaplin regions and compositions.
 * Run `brunch watch --server` in current directory
 
 ## License
+
 The MIT license.
 
 Copyright (c) 2012 Paul Miller (http://paulmillr.com/)
