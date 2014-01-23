@@ -5,8 +5,8 @@ InfoView = require 'views/info-view'
 module.exports = class Controller extends Chaplin.Controller
   beforeAction: (params, route) ->
     if route.controller in ['inner', 'site']
-      @compose 'site', ThreePaneView
-      @compose 'header', ->
+      @reuse 'site', ThreePaneView
+      @reuse 'header', ->
         @view = new InfoView region: 'header', name: 'header'
-      @compose 'footer', ->
+      @reuse 'footer', ->
         @view = new InfoView region: 'footer', name: 'footer'

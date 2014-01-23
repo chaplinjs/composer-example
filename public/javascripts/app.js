@@ -37,28 +37,29 @@
     return function(name) {
       var dir = dirname(path);
       var absolute = expand(dir, name);
-      return globals.require(absolute);
+      return globals.require(absolute, path);
     };
   };
 
   var initModule = function(name, definition) {
     var module = {id: name, exports: {}};
+    cache[name] = module;
     definition(module.exports, localRequire(name), module);
-    var exports = cache[name] = module.exports;
-    return exports;
+    return module.exports;
   };
 
-  var require = function(name) {
+  var require = function(name, loaderPath) {
     var path = expand(name, '.');
+    if (loaderPath == null) loaderPath = '/';
 
-    if (has(cache, path)) return cache[path];
+    if (has(cache, path)) return cache[path].exports;
     if (has(modules, path)) return initModule(path, modules[path]);
 
     var dirIndex = expand(path, './index');
-    if (has(cache, dirIndex)) return cache[dirIndex];
+    if (has(cache, dirIndex)) return cache[dirIndex].exports;
     if (has(modules, dirIndex)) return initModule(dirIndex, modules[dirIndex]);
 
-    throw new Error('Cannot find module "' + name + '"');
+    throw new Error('Cannot find module "' + name + '" from '+ '"' + loaderPath + '"');
   };
 
   var define = function(bundle, fn) {
@@ -89,8 +90,7 @@
   globals.require.list = list;
   globals.require.brunch = true;
 })();
-
-window.require.register("application", function(exports, require, module) {
+require.register("application", function(exports, require, module) {
 var Application, Layout, routes, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -118,7 +118,7 @@ module.exports = Application = (function(_super) {
 })(Chaplin.Application);
 });
 
-window.require.register("controllers/base/controller", function(exports, require, module) {
+;require.register("controllers/base/controller", function(exports, require, module) {
 var Controller, InfoView, ThreePaneView, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -138,14 +138,14 @@ module.exports = Controller = (function(_super) {
   Controller.prototype.beforeAction = function(params, route) {
     var _ref1;
     if ((_ref1 = route.controller) === 'inner' || _ref1 === 'site') {
-      this.compose('site', ThreePaneView);
-      this.compose('header', function() {
+      this.reuse('site', ThreePaneView);
+      this.reuse('header', function() {
         return this.view = new InfoView({
           region: 'header',
           name: 'header'
         });
       });
-      return this.compose('footer', function() {
+      return this.reuse('footer', function() {
         return this.view = new InfoView({
           region: 'footer',
           name: 'footer'
@@ -159,7 +159,7 @@ module.exports = Controller = (function(_super) {
 })(Chaplin.Controller);
 });
 
-window.require.register("controllers/home-controller", function(exports, require, module) {
+;require.register("controllers/home-controller", function(exports, require, module) {
 var Controller, HomeController, HomePageView, InfoView, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -191,7 +191,7 @@ module.exports = HomeController = (function(_super) {
 })(Controller);
 });
 
-window.require.register("controllers/inner-controller", function(exports, require, module) {
+;require.register("controllers/inner-controller", function(exports, require, module) {
 var Controller, InfoView, InnerController, InnerView, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -212,7 +212,7 @@ module.exports = InnerController = (function(_super) {
 
   InnerController.prototype.beforeAction = function() {
     InnerController.__super__.beforeAction.apply(this, arguments);
-    return this.compose('inner-container', function() {
+    return this.reuse('inner-container', function() {
       return this.view = new InnerView({
         region: 'content'
       });
@@ -238,7 +238,7 @@ module.exports = InnerController = (function(_super) {
 })(Controller);
 });
 
-window.require.register("controllers/site-controller", function(exports, require, module) {
+;require.register("controllers/site-controller", function(exports, require, module) {
 var Controller, InfoView, SiteController, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -274,7 +274,7 @@ module.exports = SiteController = (function(_super) {
 })(Controller);
 });
 
-window.require.register("initialize", function(exports, require, module) {
+;require.register("initialize", function(exports, require, module) {
 var Application, routes;
 
 Application = require('application');
@@ -290,47 +290,13 @@ $(function() {
 });
 });
 
-window.require.register("lib/support", function(exports, require, module) {
-var support, utils;
-
-utils = require('lib/utils');
-
-support = utils.beget(Chaplin.support);
-
-module.exports = support;
-});
-
-window.require.register("lib/utils", function(exports, require, module) {
-var utils;
-
-utils = Chaplin.utils.beget(Chaplin.utils);
-
-module.exports = utils;
-});
-
-window.require.register("lib/view-helper", function(exports, require, module) {
+;require.register("lib/view-helper", function(exports, require, module) {
 var __slice = [].slice;
-
-Handlebars.registerHelper('with', function(context, options) {
-  if (!context || Handlebars.Utils.isEmpty(context)) {
-    return options.inverse(this);
-  } else {
-    return options.fn(context);
-  }
-});
-
-Handlebars.registerHelper('without', function(context, options) {
-  var inverse;
-  inverse = options.inverse;
-  options.inverse = options.fn;
-  options.fn = inverse;
-  return Handlebars.helpers["with"].call(this, context, options);
-});
 
 Handlebars.registerHelper('url', function() {
   var options, params, routeName, _i;
   routeName = arguments[0], params = 3 <= arguments.length ? __slice.call(arguments, 1, _i = arguments.length - 1) : (_i = 1, []), options = arguments[_i++];
-  return Chaplin.helpers.reverse(routeName, params);
+  return Chaplin.utils.reverse(routeName, params);
 });
 
 Handlebars.registerHelper('formatDate', function(param, options) {
@@ -340,47 +306,7 @@ Handlebars.registerHelper('formatDate', function(param, options) {
 });
 });
 
-window.require.register("models/base/collection", function(exports, require, module) {
-var Collection, Model, _ref,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Model = require('models/base/model');
-
-module.exports = Collection = (function(_super) {
-  __extends(Collection, _super);
-
-  function Collection() {
-    _ref = Collection.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
-
-  Collection.prototype.model = Model;
-
-  return Collection;
-
-})(Chaplin.Collection);
-});
-
-window.require.register("models/base/model", function(exports, require, module) {
-var Model, _ref,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-module.exports = Model = (function(_super) {
-  __extends(Model, _super);
-
-  function Model() {
-    _ref = Model.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
-
-  return Model;
-
-})(Chaplin.Model);
-});
-
-window.require.register("routes", function(exports, require, module) {
+;require.register("routes", function(exports, require, module) {
 module.exports = function(match) {
   match('', 'home#index');
   match('site', 'site#index');
@@ -390,7 +316,7 @@ module.exports = function(match) {
 };
 });
 
-window.require.register("views/base/collection-view", function(exports, require, module) {
+;require.register("views/base/collection-view", function(exports, require, module) {
 var CollectionView, View, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -412,7 +338,7 @@ module.exports = CollectionView = (function(_super) {
 })(Chaplin.CollectionView);
 });
 
-window.require.register("views/base/view", function(exports, require, module) {
+;require.register("views/base/view", function(exports, require, module) {
 var View, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -438,7 +364,7 @@ module.exports = View = (function(_super) {
 })(Chaplin.View);
 });
 
-window.require.register("views/home-page-view", function(exports, require, module) {
+;require.register("views/home-page-view", function(exports, require, module) {
 var HomePageView, View, template, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -470,7 +396,7 @@ module.exports = HomePageView = (function(_super) {
 })(View);
 });
 
-window.require.register("views/info-view", function(exports, require, module) {
+;require.register("views/info-view", function(exports, require, module) {
 var InfoView, View, template, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -510,7 +436,7 @@ module.exports = InfoView = (function(_super) {
 })(View);
 });
 
-window.require.register("views/inner-view", function(exports, require, module) {
+;require.register("views/inner-view", function(exports, require, module) {
 var InnerView, View, template, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -540,7 +466,7 @@ module.exports = InnerView = (function(_super) {
 })(View);
 });
 
-window.require.register("views/layout", function(exports, require, module) {
+;require.register("views/layout", function(exports, require, module) {
 var Layout, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -579,91 +505,119 @@ module.exports = Layout = (function(_super) {
 })(Chaplin.Layout);
 });
 
-window.require.register("views/templates/home-page", function(exports, require, module) {
-module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+;require.register("views/templates/home-page", function(exports, require, module) {
+var __templateData = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
   this.compilerInfo = [4,'>= 1.0.0'];
 helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
-  var buffer = "", stack1, options, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
+  var buffer = "", helper, options, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
 
 
-  buffer += "<div class=\"page-header\">\n  <h1>Composing <small>with <strong>Chaplin</strong></small></h1>\n</div>\n<p>\n  <a href=\"#";
-  options = {hash:{},data:data};
-  buffer += escapeExpression(((stack1 = helpers.url || depth0.url),stack1 ? stack1.call(depth0, "site#index", options) : helperMissing.call(depth0, "url", "site#index", options)))
+  buffer += "<div class=\"page-header\">\n  <h1>Composing <small>with <strong>Chaplin</strong></small></h1>\n</div>\n<p>\n  <a href=\"#"
+    + escapeExpression((helper = helpers.url || (depth0 && depth0.url),options={hash:{},data:data},helper ? helper.call(depth0, "site#index", options) : helperMissing.call(depth0, "url", "site#index", options)))
     + "\" class=\"btn btn-inverse btn-large\">\n    <strong>Explore</strong>\n  </a>\n</p>\n<div id=\"item-view-container\"></div>\n";
   return buffer;
   });
+if (typeof define === 'function' && define.amd) {
+  define([], function() {
+    return __templateData;
+  });
+} else if (typeof module === 'object' && module && module.exports) {
+  module.exports = __templateData;
+} else {
+  __templateData;
+}
 });
 
-window.require.register("views/templates/info", function(exports, require, module) {
-module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+;require.register("views/templates/info", function(exports, require, module) {
+var __templateData = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
   this.compilerInfo = [4,'>= 1.0.0'];
 helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
-  var buffer = "", stack1, stack2, options, functionType="function", escapeExpression=this.escapeExpression, helperMissing=helpers.helperMissing;
+  var buffer = "", stack1, helper, options, functionType="function", escapeExpression=this.escapeExpression, helperMissing=helpers.helperMissing;
 
 
   buffer += "<h3>";
-  if (stack1 = helpers.name) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
-  else { stack1 = depth0.name; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
+  if (helper = helpers.name) { stack1 = helper.call(depth0, {hash:{},data:data}); }
+  else { helper = (depth0 && depth0.name); stack1 = typeof helper === functionType ? helper.call(depth0, {hash:{},data:data}) : helper; }
   buffer += escapeExpression(stack1)
     + "</h3>\n<dl>\n  <dt>cid</dt>\n  <dd><code>";
-  if (stack1 = helpers.cid) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
-  else { stack1 = depth0.cid; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
+  if (helper = helpers.cid) { stack1 = helper.call(depth0, {hash:{},data:data}); }
+  else { helper = (depth0 && depth0.cid); stack1 = typeof helper === functionType ? helper.call(depth0, {hash:{},data:data}) : helper; }
   buffer += escapeExpression(stack1)
-    + "</code></dd>\n\n  <dt>timestamp</dt>\n  <dd><code>";
-  options = {hash:{},data:data};
-  buffer += escapeExpression(((stack1 = helpers.formatDate || depth0.formatDate),stack1 ? stack1.call(depth0, depth0.timestamp, options) : helperMissing.call(depth0, "formatDate", depth0.timestamp, options)))
+    + "</code></dd>\n\n  <dt>timestamp</dt>\n  <dd><code>"
+    + escapeExpression((helper = helpers.formatDate || (depth0 && depth0.formatDate),options={hash:{},data:data},helper ? helper.call(depth0, (depth0 && depth0.timestamp), options) : helperMissing.call(depth0, "formatDate", (depth0 && depth0.timestamp), options)))
     + "</code></dd>\n\n  <dt>region</dt>\n  <dd><code>";
-  if (stack2 = helpers.region) { stack2 = stack2.call(depth0, {hash:{},data:data}); }
-  else { stack2 = depth0.region; stack2 = typeof stack2 === functionType ? stack2.apply(depth0) : stack2; }
-  buffer += escapeExpression(stack2)
+  if (helper = helpers.region) { stack1 = helper.call(depth0, {hash:{},data:data}); }
+  else { helper = (depth0 && depth0.region); stack1 = typeof helper === functionType ? helper.call(depth0, {hash:{},data:data}) : helper; }
+  buffer += escapeExpression(stack1)
     + "</code></dd>\n</dl>\n";
   return buffer;
   });
+if (typeof define === 'function' && define.amd) {
+  define([], function() {
+    return __templateData;
+  });
+} else if (typeof module === 'object' && module && module.exports) {
+  module.exports = __templateData;
+} else {
+  __templateData;
+}
 });
 
-window.require.register("views/templates/inner", function(exports, require, module) {
-module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+;require.register("views/templates/inner", function(exports, require, module) {
+var __templateData = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
   this.compilerInfo = [4,'>= 1.0.0'];
 helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
-  var buffer = "", stack1, options, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
+  var buffer = "", helper, options, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
 
 
-  buffer += "<nav>\n  <h3>Inner</h3>\n  <a data-name=\"inner#index\" href=\"#";
-  options = {hash:{},data:data};
-  buffer += escapeExpression(((stack1 = helpers.url || depth0.url),stack1 ? stack1.call(depth0, "inner#index", options) : helperMissing.call(depth0, "url", "inner#index", options)))
-    + "\">Index</a>\n  <a data-name=\"inner#other\" href=\"#";
-  options = {hash:{},data:data};
-  buffer += escapeExpression(((stack1 = helpers.url || depth0.url),stack1 ? stack1.call(depth0, "inner#other", options) : helperMissing.call(depth0, "url", "inner#other", options)))
+  buffer += "<nav>\n  <h3>Inner</h3>\n  <a data-name=\"inner#index\" href=\"#"
+    + escapeExpression((helper = helpers.url || (depth0 && depth0.url),options={hash:{},data:data},helper ? helper.call(depth0, "inner#index", options) : helperMissing.call(depth0, "url", "inner#index", options)))
+    + "\">Index</a>\n  <a data-name=\"inner#other\" href=\"#"
+    + escapeExpression((helper = helpers.url || (depth0 && depth0.url),options={hash:{},data:data},helper ? helper.call(depth0, "inner#other", options) : helperMissing.call(depth0, "url", "inner#other", options)))
     + "\">Other</a>\n</nav>\n<div id=\"inner-container\"></div>\n";
   return buffer;
   });
+if (typeof define === 'function' && define.amd) {
+  define([], function() {
+    return __templateData;
+  });
+} else if (typeof module === 'object' && module && module.exports) {
+  module.exports = __templateData;
+} else {
+  __templateData;
+}
 });
 
-window.require.register("views/templates/three-pane", function(exports, require, module) {
-module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+;require.register("views/templates/three-pane", function(exports, require, module) {
+var __templateData = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
   this.compilerInfo = [4,'>= 1.0.0'];
 helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
-  var buffer = "", stack1, options, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
+  var buffer = "", helper, options, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
 
 
-  buffer += "<div id=\"header-container\">\n  <a href=\"#";
-  options = {hash:{},data:data};
-  buffer += escapeExpression(((stack1 = helpers.url || depth0.url),stack1 ? stack1.call(depth0, "home#index", options) : helperMissing.call(depth0, "url", "home#index", options)))
-    + "\"><strong>Return</strong></a>\n  <header id=\"header\"></header>\n</div>\n<div id=\"content-container\">\n  <nav>\n    <h2>Content</h2>\n    <a data-name=\"site#index\" href=\"#";
-  options = {hash:{},data:data};
-  buffer += escapeExpression(((stack1 = helpers.url || depth0.url),stack1 ? stack1.call(depth0, "site#index", options) : helperMissing.call(depth0, "url", "site#index", options)))
-    + "\">Index</a>\n    <a data-name=\"site#other\" href=\"#";
-  options = {hash:{},data:data};
-  buffer += escapeExpression(((stack1 = helpers.url || depth0.url),stack1 ? stack1.call(depth0, "site#other", options) : helperMissing.call(depth0, "url", "site#other", options)))
-    + "\">Other</a>\n    <a data-name=\"inner#index\" href=\"#";
-  options = {hash:{},data:data};
-  buffer += escapeExpression(((stack1 = helpers.url || depth0.url),stack1 ? stack1.call(depth0, "inner#index", options) : helperMissing.call(depth0, "url", "inner#index", options)))
+  buffer += "<div id=\"header-container\">\n  <a href=\"#"
+    + escapeExpression((helper = helpers.url || (depth0 && depth0.url),options={hash:{},data:data},helper ? helper.call(depth0, "home#index", options) : helperMissing.call(depth0, "url", "home#index", options)))
+    + "\"><strong>Return</strong></a>\n  <header id=\"header\"></header>\n</div>\n<div id=\"content-container\">\n  <nav>\n    <h2>Content</h2>\n    <a data-name=\"site#index\" href=\"#"
+    + escapeExpression((helper = helpers.url || (depth0 && depth0.url),options={hash:{},data:data},helper ? helper.call(depth0, "site#index", options) : helperMissing.call(depth0, "url", "site#index", options)))
+    + "\">Index</a>\n    <a data-name=\"site#other\" href=\"#"
+    + escapeExpression((helper = helpers.url || (depth0 && depth0.url),options={hash:{},data:data},helper ? helper.call(depth0, "site#other", options) : helperMissing.call(depth0, "url", "site#other", options)))
+    + "\">Other</a>\n    <a data-name=\"inner#index\" href=\"#"
+    + escapeExpression((helper = helpers.url || (depth0 && depth0.url),options={hash:{},data:data},helper ? helper.call(depth0, "inner#index", options) : helperMissing.call(depth0, "url", "inner#index", options)))
     + "\">Inner</a>\n  </nav>\n  <section id=\"content\"></section>\n</div>\n<div id=\"footer-container\">\n  <footer id=\"footer\"></footer>\n</div>\n";
   return buffer;
   });
+if (typeof define === 'function' && define.amd) {
+  define([], function() {
+    return __templateData;
+  });
+} else if (typeof module === 'object' && module && module.exports) {
+  module.exports = __templateData;
+} else {
+  __templateData;
+}
 });
 
-window.require.register("views/three-pane-view", function(exports, require, module) {
+;require.register("views/three-pane-view", function(exports, require, module) {
 var ThreePaneView, View, template, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -697,5 +651,5 @@ module.exports = ThreePaneView = (function(_super) {
 })(View);
 });
 
-
+;
 //# sourceMappingURL=app.js.map

@@ -5,7 +5,7 @@ InnerView = require 'views/inner-view'
 module.exports = class InnerController extends Controller
   beforeAction: ->
     super
-    @compose 'inner-container', ->
+    @reuse 'inner-container', ->
       @view = new InnerView region: 'content'
 
   index: (params, route) ->
